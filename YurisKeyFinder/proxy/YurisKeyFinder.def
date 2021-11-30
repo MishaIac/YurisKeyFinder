@@ -1,0 +1,5 @@
+LIBRARY dsound
+EXPORTS
+	DirectSoundCreate=fDirectSoundCreate @1
+	DirectSoundEnumerateA=fDirectSoundEnumerateA @2
+	DirectSoundEnumerateW=fDirectSoundEnumerateW @3

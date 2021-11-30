@@ -83,7 +83,7 @@ BOOL HookGame()
 	}
 	else
 	{
-		cout << "XOR Key not find" << endl;
+		cout << "Please, close the game, to get XOR Key" << endl;
 	}
 	return TRUE;
 }
@@ -92,32 +92,59 @@ static void make_console() {
 	AllocConsole();
 	std::ignore = freopen("CONOUT$", "w", stdout);
 	std::ignore = freopen("CONIN$", "r", stdin);
-	cout << "Yu-ris Key Finder by TotSamiyMisha v1.01" << endl;
+	cout << "Yu-ris Key Finder by TotSamiyMisha v1.01 with Proxy" << endl;
 }
+
+#pragma region Proxy
+struct dsound_dll {
+	HMODULE dll;
+	FARPROC oDirectSoundCreate;
+	FARPROC oDirectSoundEnumerateA;
+	FARPROC oDirectSoundEnumerateW;
+} dsound;
+
+extern "C" void __declspec(naked) fDirectSoundCreate(void)
+{
+	__asm jmp dsound.oDirectSoundCreate;
+}
+
+extern "C" void __declspec(naked) fDirectSoundEnumerateA(void)
+{
+	__asm jmp dsound.oDirectSoundEnumerateA;
+}
+
+extern "C" void __declspec(naked) fDirectSoundEnumerateW(void)
+{
+	__asm jmp dsound.oDirectSoundEnumerateW;
+}
+
+void setupFunctions() {
+	dsound.oDirectSoundCreate = GetProcAddress(dsound.dll, "DirectSoundCreate");
+	dsound.oDirectSoundEnumerateA = GetProcAddress(dsound.dll, "DirectSoundEnumerateA");
+	dsound.oDirectSoundEnumerateW = GetProcAddress(dsound.dll, "DirectSoundEnumerateW");
+}
+#pragma endregion
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
 {
-	switch (ul_reason_for_call)
+	if (ul_reason_for_call == DLL_PROCESS_ATTACH)
 	{
-	case DLL_PROCESS_ATTACH:
-	{
-		DetourRestoreAfterWith();
+		wchar_t* SysDirPath = new wchar_t[MAX_PATH];
+		GetSystemDirectoryW(SysDirPath, MAX_PATH);
+
+		wchar_t* DSOUND_Path = new wchar_t[MAX_PATH + 12];
+		wsprintfW(DSOUND_Path, L"%s\\DSOUND.dll", SysDirPath);
+		dsound.dll = LoadLibraryW(DSOUND_Path);
+		setupFunctions();
 
 		make_console();
 
+		return HookGame();
+	}
+	else if (ul_reason_for_call == DLL_PROCESS_DETACH)
+	{
 		HookGame();
-
-		break;
+		MessageBoxW(NULL, L"XOR Key found", L"Info", MB_OK);
 	}
-	case DLL_THREAD_ATTACH:
-	case DLL_THREAD_DETACH:
-	case DLL_PROCESS_DETACH:
-		break;
-	}
-	return TRUE;
-}
-
-BOOL APIENTRY GetKey()
-{
 	return TRUE;
 }
